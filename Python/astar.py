@@ -1,18 +1,77 @@
+import time
+from math import sqrt
+from typing import List, Tuple
+import numpy as np
+import random
+
 # 1 for manhattan, 0 for euclidean
-HEURISTIC = 0
+HEURISTIC = 1
+DIAGONALS = False
 
-grid = [
-    [0, 0, 0, 0, 0, 0, 0],
-    [0, 1, 0, 0, 0, 0, 0],  # 0 are free path whereas 1's are obstacles
-    [0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 1, 0, 0, 0, 0],
-    [1, 0, 1, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 1, 0, 0],
-]
+class World:
+    def __init__(self, length: int, height: int, p_walls: float):
+        self.length = length
+        self.height = height
+        self.p_walls = p_walls
+        self.path_added = False
 
-delta = [[-1, 0], [0, -1], [1, 0], [0, 1]]  # up, left, down, right
+        self.grid = np.zeros((height, length), int)
+        self.__generate_walls()
 
+        if not DIAGONALS:
+            # up, left, down, right
+            self.delta = [[-1, 0, 1], 
+                          [0, -1, 1], 
+                          [1, 0, 1], 
+                          [0, 1, 1]]  
+        else:
+            # up, left, down, right 
+            # upleft, upright, downleft, downright
+            self.delta = [[-1, 0, 1], 
+                          [0, -1, 1], 
+                          [1, 0, 1], 
+                          [0, 1, 1],
+                          [-1, -1, sqrt(2)],
+                          [-1, 1, sqrt(2)],
+                          [1, -1, sqrt(2)],
+                          [1, 1, sqrt(2)]]
+
+    def add_path(self, path: List[Tuple[int]]):
+        i = 0
+        for elem in path:
+            if i == 0:
+                self.grid[elem[1]][elem[0]] = 3
+            elif i == len(path) - 1:
+                self.grid[elem[1]][elem[0]] = 3
+            else:
+                self.grid[elem[1]][elem[0]] = 2
+            i += 1
+        self.path_added = True
+
+    def plot_path(self):
+        if self.path_added:
+            print(self.grid)
+        else:
+            print("No path added, can't plot path")
+
+    def get_random_available_position(self) -> Tuple[int]:
+        while 1:
+            random_row = random.randint(0, self.height - 1)
+            random_col = random.randint(0, self.length - 1)
+
+            if self.grid[random_row][random_col] != 1:
+                break
+                
+        return((random_row, random_col))
+                
+    def change_grid(self, position: Tuple[int], value: int):
+        self.grid[position[1]][position[0]] = value
+        
+    def __generate_walls(self):
+        for x in range(self.height):
+            for y in range(self.length):
+                if random.random() < self.p_walls:
+                    self.grid[x][y] = 1
 
 class Node:
     """
@@ -30,7 +89,7 @@ class Node:
     True
     """
 
-    def __init__(self, pos_x, pos_y, goal_x, goal_y, g_cost, parent):
+    def __init__(self, pos_x: int, pos_y: int, goal_x: int, goal_y: int, g_cost: float, parent):
         self.pos_x = pos_x
         self.pos_y = pos_y
         self.pos = (pos_y, pos_x)
@@ -53,17 +112,18 @@ class Node:
             return sqrt(dy ** 2 + dx ** 2)
 
     def __lt__(self, other) -> bool:
-        return self.f_cost < other.f_cost
+        return self.f_cost <= other.f_cost
 
 
 class AStar:
     """
-    >>> astar = AStar((0, 0), (len(grid) - 1, len(grid[0]) - 1))
-    >>> (astar.start.pos_y + delta[3][0], astar.start.pos_x + delta[3][1])
+    >>> wd = World(10, 10, 0.2)
+    >>> astar = AStar((0, 0), (len(wd.grid) - 1, len(wd.grid[0]) - 1), wd)
+    >>> (astar.start.pos_y + wd.delta[3][0], astar.start.pos_x + wd.delta[3][1])
     (0, 1)
     >>> [x.pos for x in astar.get_successors(astar.start)]
     [(1, 0), (0, 1)]
-    >>> (astar.start.pos_y + delta[2][0], astar.start.pos_x + delta[2][1])
+    >>> (astar.start.pos_y + wd.delta[2][0], astar.start.pos_x + wd.delta[2][1])
     (1, 0)
     >>> astar.retrace_path(astar.start)
     [(0, 0)]
@@ -72,9 +132,10 @@ class AStar:
      (4, 3), (4, 4), (5, 4), (5, 5), (6, 5), (6, 6)]
     """
 
-    def __init__(self, start, goal):
+    def __init__(self, start: Tuple[int], goal: Tuple[int], world: World):
         self.start = Node(start[1], start[0], goal[1], goal[0], 0, None)
         self.target = Node(goal[1], goal[0], goal[1], goal[0], 99999, None)
+        self.world = world
 
         self.open_nodes = [self.start]
         self.closed_nodes = []
@@ -114,16 +175,16 @@ class AStar:
 
     def get_successors(self, parent: Node) -> List[Node]:
         """
-        Returns a list of successors (both in the grid and free spaces)
+        Returns a list of successors (both in the world and free spaces)
         """
         successors = []
-        for action in delta:
+        for action in self.world.delta:
             pos_x = parent.pos_x + action[1]
             pos_y = parent.pos_y + action[0]
-            if not (0 <= pos_x <= len(grid[0]) - 1 and 0 <= pos_y <= len(grid) - 1):
+            if not (0 <= pos_x <= len(self.world.grid[0]) - 1 and 0 <= pos_y <= len(self.world.grid) - 1):
                 continue
 
-            if grid[pos_y][pos_x] != 0:
+            if self.world.grid[pos_y][pos_x] != 0:
                 continue
 
             successors.append(
@@ -132,7 +193,7 @@ class AStar:
                     pos_y,
                     self.target.pos_y,
                     self.target.pos_x,
-                    parent.g_cost + 1,
+                    parent.g_cost + action[2],
                     parent,
                 )
             )
@@ -150,21 +211,25 @@ class AStar:
         path.reverse()
         return path
 
-    def print_grid(self, path: List[Tuple[int]]) -> List[List[int]]:
-        tmp_grid = grid
-        for elem in path:
-            tmp_grid[elem[0]][elem[1]] = 2
-
 if __name__ == "__main__":
     # all coordinates are given in format [y,x]
     import doctest
 
     doctest.testmod()
-    init = (0, 0)
-    goal = (len(grid) - 1, len(grid[0]) - 1)
-    
-    for elem in grid:
-        print(elem)
 
-    a_star = AStar(init, goal)
-    path = a_star.search()
+    # w = World(10, 10, 0.25)
+    # print(w.grid)
+    
+    # start = w.get_random_available_position()
+    # goal = w.get_random_available_position()
+
+    # print(start, goal)
+
+    # astar = AStar(start, goal, w)
+    # path = astar.search()
+
+    # print(path)
+
+    # w.add_path(path)
+    # w.plot_path()
+
