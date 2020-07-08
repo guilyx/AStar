@@ -5,7 +5,7 @@ import numpy as np
 import random
 
 # 1 for manhattan, 0 for euclidean
-HEURISTIC = 1
+HEURISTIC = 0
 DIAGONALS = False
 
 class World:
@@ -171,7 +171,7 @@ class AStar:
                         self.open_nodes.append(better_node)
 
         if not (self.reached):
-            return [(self.start.pos)]
+            return [self.start.pos]
 
     def get_successors(self, parent: Node) -> List[Node]:
         """
@@ -181,7 +181,7 @@ class AStar:
         for action in self.world.delta:
             pos_x = parent.pos_x + action[1]
             pos_y = parent.pos_y + action[0]
-            if not (0 <= pos_x <= len(self.world.grid[0]) - 1 and 0 <= pos_y <= len(self.world.grid) - 1):
+            if not (0 <= pos_x <= self.world.length - 1 and 0 <= pos_y <= self.world.height - 1):
                 continue
 
             if self.world.grid[pos_y][pos_x] != 0:
@@ -191,8 +191,8 @@ class AStar:
                 Node(
                     pos_x,
                     pos_y,
-                    self.target.pos_y,
                     self.target.pos_x,
+                    self.target.pos_y,
                     parent.g_cost + action[2],
                     parent,
                 )
@@ -213,23 +213,28 @@ class AStar:
 
 if __name__ == "__main__":
     # all coordinates are given in format [y,x]
-    import doctest
+    # import doctest
 
-    doctest.testmod()
+    # doctest.testmod()
 
-    # w = World(10, 10, 0.25)
-    # print(w.grid)
+    w = World(10, 10, 0)
+    print(w.grid)
     
-    # start = w.get_random_available_position()
-    # goal = w.get_random_available_position()
+    # Generated
+    start = w.get_random_available_position()
+    goal = w.get_random_available_position()
 
+    # Hardcoded
+    # start = (5, 5)
+    # goal = (0, 9)
+    
     # print(start, goal)
 
-    # astar = AStar(start, goal, w)
-    # path = astar.search()
+    astar = AStar(start, goal, w)
+    path = astar.search()
 
     # print(path)
 
-    # w.add_path(path)
-    # w.plot_path()
+    w.add_path(path)
+    w.plot_path()
 
