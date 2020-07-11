@@ -42,7 +42,7 @@ class World:
             if i == 0:
                 self.grid[elem[1]][elem[0]] = 3
             elif i == len(path) - 1:
-                self.grid[elem[1]][elem[0]] = 3
+                self.grid[elem[1]][elem[0]] = 4
             else:
                 self.grid[elem[1]][elem[0]] = 2
             i += 1
@@ -50,7 +50,13 @@ class World:
 
     def plot_path(self):
         if self.path_added:
-            print(self.grid)
+            string_grid = self.grid.astype(str)
+            string_grid[string_grid == '0'] = ' '
+            string_grid[string_grid == '1'] = '█'
+            string_grid[string_grid == '2'] = 'o'
+            string_grid[string_grid == '3'] = 'x'
+            string_grid[string_grid == '4'] = 'x'
+            print(string_grid)
         else:
             print("No path added, can't plot path")
 
@@ -179,9 +185,9 @@ class AStar:
         """
         successors = []
         for action in self.world.delta:
-            pos_x = parent.pos_x + action[1]
-            pos_y = parent.pos_y + action[0]
-            if not (0 <= pos_x <= self.world.length - 1 and 0 <= pos_y <= self.world.height - 1):
+            pos_x = parent.pos_x + action[0]
+            pos_y = parent.pos_y + action[1]
+            if not (0 <= pos_x < self.world.length and 0 <= pos_y < self.world.height):
                 continue
 
             if self.world.grid[pos_y][pos_x] != 0:
@@ -217,7 +223,7 @@ if __name__ == "__main__":
 
     # doctest.testmod()
 
-    w = World(10, 10, 0)
+    w = World(10, 10, .3)
     print(w.grid)
     
     # Generated
@@ -228,12 +234,10 @@ if __name__ == "__main__":
     # start = (5, 5)
     # goal = (0, 9)
     
-    # print(start, goal)
+    print(start, goal)
 
     astar = AStar(start, goal, w)
     path = astar.search()
-
-    # print(path)
 
     w.add_path(path)
     w.plot_path()
