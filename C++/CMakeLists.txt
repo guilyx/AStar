@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 project(cpp_astar)
 set(CMAKE_CXX_STANDARD 14)
+set(fper)
 
 set(SOURCE_FILES astar.cpp)
 

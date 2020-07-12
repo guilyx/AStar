@@ -156,7 +156,7 @@ int **generateMap(int height, int length, int wallPercentage)
 
     for (int i2 = 0; i2 < height; i2++) {
         for (int j2 = 0; j2 < length; j2++) {
-            float wallornot = rand();
+            float wallornot = (float) rand() / RAND_MAX;
             if (wallornot > wallPercentage) {
                 if ((i2 == 0) || (j2 == 0) || (i2 == (height - 1)) || (j2 == (length - 1))) {
                     map[i2][j2] = 1;

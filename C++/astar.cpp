@@ -2,14 +2,17 @@
 #include <map>
 #include <random>
 #include <stdlib.h>
+#include <algorithm>
 #include <stdio.h>
-#include <math.h>
+#include <cmath>
+#include <iostream>
+#include <set>
 
 #define clear()     printf("\033[H\033[J")
 
 
-#define diagonals true
-#define heuristic 0
+#define DIAGONALS            true
+#define HEURISTIC_FUNCTION   0
 
 typedef struct {
     int posX;
@@ -21,6 +24,21 @@ typedef struct {
     int movY;
     float cost;
 } Actions;
+
+typedef struct {
+    float manhattan(Position a, Position b) {
+        int dy = abs(b.posY - a.posY);
+        int dx = abs(b.posX - a.posX);
+        float h = dx + dy;
+        return dx + dy;
+    }
+    float euclidian(Position a, Position b) {
+        int dy = b.posY - a.posY;
+        int dx = b.posX - a.posX;
+        float h = sqrt(pow(dx, 2) + pow(dy, 2));
+        return h;
+    }
+} Heuristics;
 
 void printColor(char color, char* printNumb) {
     switch(color) {
@@ -45,13 +63,19 @@ void printColor(char color, char* printNumb) {
 
 class World {
     public:
-        World(int height, int length, float wallPercentage);
+        World(int height = 10, int length = 10, float wallPercentage = .1);
         void printGrid();
         void addPath(std::vector<Position> path);
+        std::vector<Actions> GetActions();
+        int** GetGrid();
+        int GetHeight();
+        int GetLength();
+        Position getRandomFreePosition();
     private:
         int m_height;
         int m_length;
         float m_wallPercentage;
+        std::vector<Actions> m_actions;
         int** m_grid;
         bool m_hasPath;
         void generateGrid();
@@ -61,8 +85,55 @@ World::World(int height, int length, float wallPercentage) {
     m_height = height;
     m_length = length;
     m_wallPercentage = wallPercentage;
-
+    if (DIAGONALS) {
+        m_actions.push_back(Actions{1, 0, 1});
+        m_actions.push_back(Actions{0, 1, 1});
+        m_actions.push_back(Actions{-1, 0, 1});
+        m_actions.push_back(Actions{0, -1, 1});
+        m_actions.push_back(Actions{1, 1, sqrt(2)});
+        m_actions.push_back(Actions{-1, 1, sqrt(2)});
+        m_actions.push_back(Actions{-1, -1, sqrt(2)});
+        m_actions.push_back(Actions{1, -1, sqrt(2)});
+    } else {
+        m_actions.push_back(Actions{1, 0, 1});
+        m_actions.push_back(Actions{0, 1, 1});
+        m_actions.push_back(Actions{-1, 0, 1});
+        m_actions.push_back(Actions{0, -1, 1});
+    }
     generateGrid();
+}
+
+std::vector<Actions> World::GetActions() {
+    std::vector<Actions> actions = this->m_actions;
+    return actions;
+}
+
+int** World::GetGrid() {
+    int** grid = this->m_grid;
+    return grid;
+}
+
+int World::GetLength() {
+    int length = this->m_length;
+    return length;
+}
+
+int World::GetHeight() {
+    int height = this->m_height;
+    return height;
+}
+
+Position World::getRandomFreePosition() {
+    int rand_h = rand() % (m_height - 1);
+    int rand_l = rand() % (m_length - 1);
+
+    while (m_grid[rand_h][rand_l] != 0) {
+        rand_h = rand() % (m_height - 1);
+        rand_l = rand() % (m_length - 1);
+    }
+    
+    return(Position{rand_h, rand_l});
+
 }
 
 void World::generateGrid() {
@@ -72,7 +143,7 @@ void World::generateGrid() {
 
     for (int i2 = 0; i2 < m_height; i2++) {
         for (int j2 = 0; j2 < m_length; j2++) {
-            float wallornot = rand();
+            float wallornot = (float) rand() / RAND_MAX;
             if (wallornot > m_wallPercentage) {
                 if ((i2 == 0) || (j2 == 0) || (i2 == (m_height - 1)) || (j2 == (m_length - 1))) {
                     m_grid[i2][j2] = 1;
@@ -115,46 +186,222 @@ void World::addPath(std::vector<Position> path) {
             }
         }
     }
+    this->m_hasPath = true;
 }
 
 class Node {
     public:
-        Node(Position pos, Position targetPos, Node parent, float gCost);
+        Node(Position pos = {-1, -1}, Position targetPos = {-1, -1}, Node* parent = nullptr, float gCost = sizeof(float));
         void printNode();
+        Node* GetParent();
+        Position GetPosition();
+        Position GetTargetPosition();
+        float GetGCost();
+        float GetHCost();
+        float GetFCost();
+        void SetPosition(Position pos);
+        void SetTargetPosition(Position targetPos);
+        void SetParent(Node* parent);
+        void SetGCost(float gCost);
     private:
         float m_hCost;
         float m_gCost;
         float m_fCost;
+        Node* m_parent;
         Position m_pos;
         Position m_targetPos;
         void calculateHeuristic();
 };
+
+Node::Node(Position pos, Position targetPos, Node* parent, float gCost) {
+    this->m_pos = pos;
+    this->m_targetPos = targetPos;
+    this->m_parent = parent;
+    this->m_gCost = gCost;
+    calculateHeuristic();
+    this->m_fCost = this->m_gCost + this->m_hCost;
+}
+
+Node* Node::GetParent() {
+    Node* parent = this->m_parent;
+    return parent;
+}
+
+Position Node::GetPosition() {
+    Position pos = this->m_pos;
+    return pos;
+}
+
+Position Node::GetTargetPosition() {
+    Position pos = this->m_targetPos;
+    return pos;
+}
+
+float Node::GetGCost() {
+    float cost = this->m_gCost;
+    return cost;
+}
+
+float Node::GetHCost() {
+    float cost = this->m_hCost;
+    return cost;
+}
+
+float Node::GetFCost() {
+    float cost = this->m_fCost;
+    return cost;
+}
+
+void Node::SetPosition(Position pos) {
+    this->m_pos = pos;
+}
+void Node::SetTargetPosition(Position targetPos) {
+    this->m_targetPos = targetPos;
+}
+void Node::SetParent(Node* parent) {
+    this->m_parent = parent;
+}
+void Node::SetGCost(float gCost) {
+    this->m_gCost = gCost;
+}
+
+void Node::printNode() {
+    std::cout << "Node [ Position : ( " << this->m_pos.posX << " ; " << this->m_pos.posY << 
+                 " ) || Costs : ( G : " << this->m_gCost << " ; H : " << this->m_hCost << 
+                 " ; F : " << this->m_fCost << " ) ]" << std::endl;
+}
+void Node::calculateHeuristic() {
+    Heuristics hFunctions;
+    if (HEURISTIC_FUNCTION == 0) this->m_hCost = hFunctions.euclidian(this->m_pos, this->m_targetPos);
+    else if (HEURISTIC_FUNCTION == 1) this->m_hCost = hFunctions.manhattan(this->m_pos, this->m_targetPos);
+    else {
+        std::cerr << "Heuristic function not found !!" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+}
+
+bool operator<(const Node &node, const Node &otherNode) {
+    Node x = node;
+    Node y = otherNode;
+    return x.GetFCost() < y.GetFCost();
+}
+
+/*
+bool operator==(const Node &node, const Node &otherNode) {
+    Node x = node;
+    Node y = otherNode;
+
+    return ((x.GetPosition().posY == x.GetPosition().posY) && (x.GetPosition().posX == y.GetPosition().posX) && (x.GetParent() == y.GetParent()) && (x.GetFCost() == y.GetFCost()));
+}*/
+
 
 class AStar {
     public:
         AStar(Position start, Position goal, World w);
         std::vector<Position> search();
     private:
-        std::vector<Node> getNeighbours();
-        std::vector<Position> retrievePath(Node lastNode);
-        Position m_start;
-        Position m_goal;
+        std::vector<Node> getNeighbours(Node node);
+        std::vector<Position> retrievePath(Node* lastNode);
+        Node m_nStart;
+        Node m_nGoal;
+        bool m_reached;
+        std::set<Node> m_openNodes;
+        std::set<Node> m_closedNodes;
         World m_world;
 };
 
-/*
-for (auto it = openSet.begin(); it != openSet.end(); it++) {
-            auto node = *it;
-            if (node->getScore() <= current->getScore()) {
-                current = node;
-                current_it = it;
+AStar::AStar(Position start, Position goal, World w) {
+    this->m_nStart = Node(start, goal, nullptr, 0);
+    this->m_nGoal = Node(goal, goal, nullptr, sizeof(float));
+    this->m_world = w; 
+    this->m_openNodes.insert(this->m_nStart);
+    this->m_reached = false;
+}
+
+std::vector<Node> AStar::getNeighbours(Node node) {
+    std::vector<Node> children;
+    for (auto &i : this->m_world.GetActions()) {
+        int posx = node.GetPosition().posX + i.movX;
+        int posy = node.GetPosition().posY + i.movY;
+
+        if (!((0 <= posx < this->m_world.GetLength()) && (0 <= posy < this->m_world.GetHeight()))) continue;
+        if (this->m_world.GetGrid()[posx][posy] != 0) continue;
+
+        Node child(Position{posx, posy}, this->m_nStart.GetTargetPosition(), &node, node.GetGCost() + i.cost);
+
+        children.push_back(child);
+    }
+    return children;
+}
+
+std::vector<Position> AStar::retrievePath(Node* node) {
+    Node* current_node = node;
+    std::vector<Position> path;
+    while (current_node != nullptr) {
+        path.push_back(current_node->GetPosition());
+        current_node = current_node->GetParent();
+    }
+    std::reverse(path.begin(), path.end());
+    return path;
+}
+
+std::vector<Position> AStar::search() {
+    while (!this->m_openNodes.empty() || !m_reached) {
+        Node best_node = *m_openNodes.begin();
+        auto toDelete = m_openNodes.begin();
+        for (auto i : m_openNodes) {
+            if (i.GetFCost() <= best_node.GetFCost()) {
+                best_node = i;
+                toDelete = m_openNodes.find(best_node);
             }
         }
-*/
+        if ((best_node.GetPosition().posX == this->m_nGoal.GetPosition().posX) && 
+            (best_node.GetPosition().posY == this->m_nGoal.GetPosition().posY)) {
+            std::vector<Position> path = retrievePath(&best_node);
+            return path;
+        }
+        // We now have the best node, remove it from the open nodes
+        this->m_openNodes.erase(toDelete);
+        this->m_closedNodes.insert(best_node);
+
+        std::vector<Node> childrenNodes = this->getNeighbours(best_node);
+
+        for (auto &child : childrenNodes) {
+            auto it_closed = this->m_closedNodes.find(child);
+            auto it_open = this->m_openNodes.find(child);
+            
+            if (it_closed != this->m_closedNodes.end()) continue;
+
+            if (it_open == this->m_openNodes.end()) {
+                this->m_openNodes.insert(child);
+            } else {
+                Node betterNode = *it_open;
+
+                if (betterNode.GetFCost() < child.GetFCost()) this->m_openNodes.insert(betterNode);
+                else this->m_openNodes.insert(child);
+            }
+        }
+    }
+
+    if (!this->m_reached) {
+        std::vector<Position> path;
+        path.push_back(this->m_nStart.GetPosition());
+        return path;
+    }
+}
 
 int main(int argc, char const *argv[])
 {
-    World w(10, 30, 0.1);
+    World w(10, 10, 0.1);
+    w.printGrid();
+    Position start = w.getRandomFreePosition();
+    Position goal = w.getRandomFreePosition();
+    std::cout << "START ( " << start.posX << " ; " << start.posY << " )" << std::endl;
+    std::cout << "GOAL ( " << goal.posX << " ; " << goal.posY << " )" << std::endl;
+    AStar astar(start, goal, w);
+    std::vector<Position> path = astar.search();
+    std::cout << "Path Found." << std::endl;
+    w.addPath(path);
     w.printGrid();
     return 0;
 }
