@@ -37,10 +37,10 @@ void printColor(char color, char* printNumb) {
     }
 }
 
-void printMap(int **map, int size) {
+void printMap(int **map, int height, int length) {
     clear();
-    for (int i3 = 0; i3 < size; i3++) {
-        for (int j3 = 0; j3 < size; j3++) {
+    for (int i3 = 0; i3 < height; i3++) {
+        for (int j3 = 0; j3 < length; j3++) {
             switch(map[i3][j3]) {
                 case(0):
                     printColor('b', ".");
@@ -57,6 +57,14 @@ void printMap(int **map, int size) {
     }
 }
 
+Position* CreatePosition(int positionX, int positionY) {
+    Position *posRobot;
+    posRobot = (Position*) malloc (sizeof(Position));
+    posRobot->posX = positionX;
+    posRobot->posY = positionY;
+    return posRobot;
+}
+
 Position* placeRobot(int **map, int size) {
     Position *posRobot;
     int rand1 = rand() % size;
@@ -67,14 +75,6 @@ Position* placeRobot(int **map, int size) {
     }
     map[rand1][rand2] = -1;
     posRobot = CreatePosition(rand1, rand2);
-    return posRobot;
-}
-
-Position* CreatePosition(int positionX, int positionY) {
-    Position *posRobot;
-    posRobot = (Position*) malloc (sizeof(Position));
-    posRobot->posX = positionX;
-    posRobot->posY = positionY;
     return posRobot;
 }
 
@@ -148,17 +148,17 @@ Node* Heuristic(Node *node, Node *goal) {
     return node;
 }
 
-int **generateMap(int size)
+int **generateMap(int height, int length, int wallPercentage)
 {
-    int **map = (int **)malloc(size * sizeof(int *));
-    for (int i = 0; i < size; i++)
-        map[i] = (int *)malloc(size * sizeof(int));
+    int **map = (int **)malloc(height * sizeof(int *));
+    for (int i = 0; i < height; i++)
+        map[i] = (int *)malloc(length * sizeof(int));
 
-    for (int i2 = 0; i2 < size; i2++) {
-        for (int j2 = 0; j2 < size; j2++) {
-            int wallornot = rand() % 101;
-            if (wallornot > 20) {
-                if ((i2 == 0) || (j2 == 0) || (i2 == (size - 1)) || (j2 == (size - 1))) {
+    for (int i2 = 0; i2 < height; i2++) {
+        for (int j2 = 0; j2 < length; j2++) {
+            float wallornot = rand();
+            if (wallornot > wallPercentage) {
+                if ((i2 == 0) || (j2 == 0) || (i2 == (height - 1)) || (j2 == (length - 1))) {
                     map[i2][j2] = 1;
                 } else {
                     map[i2][j2] = 0;
@@ -174,10 +174,14 @@ int **generateMap(int size)
 }
 
 int* search() {
-    int* path
-    return path
+    int* path;
+    return path;
 }
 
 int main() {
-    return 0
+    int height = 10;
+    int length = 20;
+    int** grid = generateMap(height, length, 0.2);
+    printMap(grid, height, length);
+    return 0;
 }
