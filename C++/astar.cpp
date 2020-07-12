@@ -12,7 +12,7 @@
 
 
 #define DIAGONALS            true
-#define HEURISTIC_FUNCTION   0
+#define HEURISTIC_FUNCTION   1
 
 typedef struct {
     int posX;
@@ -182,7 +182,7 @@ void World::addPath(std::vector<Position> path) {
     for (int i3 = 0; i3 < m_height; i3++) {
         for (int j3 = 0; j3 < m_length; j3++) {
             for (auto &i : path) {
-                m_grid[i.posY][i.posX] = 3;
+                m_grid[i.posX][i.posY] = 2;
             }
         }
     }
@@ -302,11 +302,12 @@ class AStar {
     private:
         std::vector<Node> getNeighbours(Node node);
         std::vector<Position> retrievePath(Node* lastNode);
+        Node* findNodeInVector(Node node, std::vector<Node> vector);
         Node m_nStart;
         Node m_nGoal;
         bool m_reached;
-        std::set<Node> m_openNodes;
-        std::set<Node> m_closedNodes;
+        std::vector<Node> m_openNodes;
+        std::vector<Node> m_closedNodes;
         World m_world;
 };
 
@@ -314,20 +315,22 @@ AStar::AStar(Position start, Position goal, World w) {
     this->m_nStart = Node(start, goal, nullptr, 0);
     this->m_nGoal = Node(goal, goal, nullptr, sizeof(float));
     this->m_world = w; 
-    this->m_openNodes.insert(this->m_nStart);
+    this->m_openNodes.push_back(this->m_nStart);
     this->m_reached = false;
 }
 
 std::vector<Node> AStar::getNeighbours(Node node) {
     std::vector<Node> children;
     for (auto &i : this->m_world.GetActions()) {
-        int posx = node.GetPosition().posX + i.movX;
         int posy = node.GetPosition().posY + i.movY;
+        int posx = node.GetPosition().posX + i.movX;
+        
+        Node* nodeptr = new Node(node);
 
         if (!((0 <= posx < this->m_world.GetLength()) && (0 <= posy < this->m_world.GetHeight()))) continue;
         if (this->m_world.GetGrid()[posx][posy] != 0) continue;
 
-        Node child(Position{posx, posy}, this->m_nStart.GetTargetPosition(), &node, node.GetGCost() + i.cost);
+        Node child(Position{posx, posy}, this->m_nStart.GetTargetPosition(), nodeptr, node.GetGCost() + i.cost);
 
         children.push_back(child);
     }
@@ -345,40 +348,49 @@ std::vector<Position> AStar::retrievePath(Node* node) {
     return path;
 }
 
+Node* AStar::findNodeInVector(Node mNode, std::vector<Node> vector) {
+    for (auto &node : vector) {
+        if ((mNode.GetPosition().posX == node.GetPosition().posX) && 
+            (mNode.GetPosition().posY == node.GetPosition().posY)) {
+            return(&mNode);
+        }
+    }
+    return nullptr;
+}
 std::vector<Position> AStar::search() {
     while (!this->m_openNodes.empty() || !m_reached) {
         Node best_node = *m_openNodes.begin();
-        auto toDelete = m_openNodes.begin();
-        for (auto i : m_openNodes) {
+        auto toDelete = &(*m_openNodes.begin());
+        for (auto &i : m_openNodes) {
             if (i.GetFCost() <= best_node.GetFCost()) {
                 best_node = i;
-                toDelete = m_openNodes.find(best_node);
+                toDelete = &i;
             }
         }
         if ((best_node.GetPosition().posX == this->m_nGoal.GetPosition().posX) && 
             (best_node.GetPosition().posY == this->m_nGoal.GetPosition().posY)) {
+
             std::vector<Position> path = retrievePath(&best_node);
             return path;
         }
         // We now have the best node, remove it from the open nodes
-        this->m_openNodes.erase(toDelete);
-        this->m_closedNodes.insert(best_node);
+        this->m_openNodes.erase(this->m_openNodes.begin() + (toDelete - &this->m_openNodes[0]));
+        this->m_closedNodes.push_back(best_node);
 
         std::vector<Node> childrenNodes = this->getNeighbours(best_node);
 
         for (auto &child : childrenNodes) {
-            auto it_closed = this->m_closedNodes.find(child);
-            auto it_open = this->m_openNodes.find(child);
-            
-            if (it_closed != this->m_closedNodes.end()) continue;
+            if (findNodeInVector(child, m_closedNodes) != nullptr) continue;
 
-            if (it_open == this->m_openNodes.end()) {
-                this->m_openNodes.insert(child);
+            Node* cNode = findNodeInVector(child, m_openNodes);
+
+            if (cNode == nullptr) {
+                this->m_openNodes.push_back(child);
             } else {
-                Node betterNode = *it_open;
+                Node betterNode = *cNode;
 
-                if (betterNode.GetFCost() < child.GetFCost()) this->m_openNodes.insert(betterNode);
-                else this->m_openNodes.insert(child);
+                if (betterNode.GetGCost() < child.GetGCost()) this->m_openNodes.push_back(betterNode);
+                else this->m_openNodes.push_back(child);
             }
         }
     }
@@ -392,7 +404,7 @@ std::vector<Position> AStar::search() {
 
 int main(int argc, char const *argv[])
 {
-    World w(10, 10, 0.1);
+    World w(20, 30, 0.3);
     w.printGrid();
     Position start = w.getRandomFreePosition();
     Position goal = w.getRandomFreePosition();
