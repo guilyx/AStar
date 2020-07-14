@@ -404,7 +404,7 @@ std::vector<Position> AStar::search() {
 
 int main(int argc, char const *argv[])
 {
-    World w(20, 30, 0.3);
+    World w(20, 30, 0.1);
     w.printGrid();
     Position start = w.getRandomFreePosition();
     Position goal = w.getRandomFreePosition();
