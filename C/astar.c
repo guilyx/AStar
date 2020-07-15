@@ -3,11 +3,11 @@
 #include <math.h>
 
 #define clear()     printf("\033[H\033[J")
-#define DIAGONALS   0
-#define HEURISTIC   0
-
 #define TRUE        1
 #define FALSE       0
+
+#define DIAGONALS   FALSE
+#define HEURISTIC   0
 
 typedef struct {
     int posX;
@@ -33,7 +33,7 @@ typedef struct {
     float g_cost;
     int isOpen;
     int isClosed;
-    Position parent;
+    Position *parent;
 } Node;
 
 void printColor(char color, char* printNumb) {
@@ -111,42 +111,6 @@ void DestroyPosition(Position *pos) {
     free(pos);
 }
 
-Position* getChildren(Map map, Position* posRobot, Node** nodes) {
-    Position children[8];
-    int i = 0;
-    int x = posRobot->posX;
-    int y = posRobot->posY;
-
-    if (x < 0 || y < 0 || x >= map.length || y >= map.height || map.grid[x][y] == 1) return NULL;
-    
-    for (int dx = -1; dx <= 1; dx++) {
-        for (int dy = -1; dx <= 1; dx++) {
-            if (DIAGONALS == TRUE) {
-                if(!(0 <= x+dx < map.height && 0 <= y+dy < map.length)) continue;
-                if (map.grid[x+dx][y+dy] != 0) continue;
-                children[i].posX = x+dx;
-                children[i].posY = y+dy;
-                if (i<8) i++;
-            } else {
-                if (dx == 0 || dy == 0) {
-                    if(!(0 <= x+dx < map.height && 0 <= y+dy < map.length)) continue;
-                    if (map.grid[x+dx][y+dy] != 0) continue;
-                    children[i].posX = x+dx;
-                    children[i].posY = y+dy;
-                    if (i<8) i++;
-                }
-            }
-        }
-    }
-
-    Position fixedChildren[i + 1];
-    for (int j = 0 ; j < (i+1) ; j++) {
-        fixedChildren[j] = children[j];
-    }
-
-    return fixedChildren;
-}
-
 float calculateHeuristic(Position nodePos, Position goalPos) {
     float h;
     if (HEURISTIC == 1) {
@@ -176,7 +140,7 @@ Node* createNode(Position *pos) {
     return node;
 }
 
-Map* generateMap(int height, int length, int wallPercentage)
+Map* generateMap(int height, int length, float wallPercentage)
 {
     Map *map;
     map = (Map*) malloc (sizeof(Map));
@@ -215,12 +179,12 @@ int compare (const Path *a, const Path *b) {
 Path* retrievePath(Node lastNode, Node** nodes, Position start, Path* path, Path* cleanPath, Map map) {
     int i = 0;
     
-    while(lastNode.pos.posX != start.posX && lastNode.pos.posY != start.posY) {
+    while(lastNode.parent != NULL) {
         if (lastNode.pos.posX == 0 && lastNode.pos.posY == 0) {
             int y = 100;
         }
         path[i].pos = lastNode.pos;
-        lastNode.pos = lastNode.parent;
+        lastNode.pos = *lastNode.parent;
         lastNode = nodes[lastNode.pos.posX][lastNode.pos.posY];
         i++;
     }
@@ -293,16 +257,18 @@ Path* search(Position start, Position goal, Map map, Path *cleanPath) {
 
                 if(nodes[currentX+dx][currentY+dy].isClosed == TRUE) continue;
 
+                if (DIAGONALS == FALSE) if (dx != 0 && dy != 0) continue;
+
                 if (nodes[currentX+dx][currentY+dy].isOpen == FALSE) {
                     nodes[currentX+dx][currentY+dy].isOpen = TRUE;
                     if (dx == 0 || dy == 0) nodes[currentX+dx][currentY+dy].g_cost = nodes[currentX][currentY].g_cost + 1;
                     else nodes[currentX+dx][currentY+dy].g_cost = nodes[currentX][currentY].g_cost + sqrt(2);
                     nodes[currentX+dx][currentY+dy].f_cost = nodes[currentX][currentY].g_cost + nodes[currentX][currentY].h_cost;
-                    nodes[currentX+dx][currentY+dy].parent = nodes[currentX][currentY].pos;
+                    nodes[currentX+dx][currentY+dy].parent = &nodes[currentX][currentY].pos;
                 } else {
                     if (dx == 0 || dy == 0) {
                         if (nodes[currentX+dx][currentY+dy].g_cost > nodes[currentX][currentY].g_cost + 1) {
-                            nodes[currentX+dx][currentY+dy].parent = nodes[currentX][currentY].pos;
+                            nodes[currentX+dx][currentY+dy].parent = &nodes[currentX][currentY].pos;
                             nodes[currentX+dx][currentY+dy].g_cost = nodes[currentX][currentY].g_cost + 1;
                             nodes[currentX+dx][currentY+dy].f_cost = nodes[currentX][currentY].g_cost + nodes[currentX][currentY].h_cost;
                         } else {
@@ -310,7 +276,7 @@ Path* search(Position start, Position goal, Map map, Path *cleanPath) {
                         }
                     } else {
                         if (nodes[currentX+dx][currentY+dy].g_cost > nodes[currentX][currentY].g_cost + sqrt(2)) {
-                            nodes[currentX+dx][currentY+dy].parent = nodes[currentX][currentY].pos;
+                            nodes[currentX+dx][currentY+dy].parent = &nodes[currentX][currentY].pos;
                             nodes[currentX+dx][currentY+dy].g_cost = nodes[currentX][currentY].g_cost + sqrt(2);
                             nodes[currentX+dx][currentY+dy].f_cost = nodes[currentX][currentY].g_cost + nodes[currentX][currentY].h_cost;
                         } else {
@@ -331,10 +297,11 @@ int main() {
     int height = 10;
     int length = 20;
     Path *path;
-    Map* map = generateMap(height, length, 0);
+    Map* map = generateMap(height, length, 0.2);
     printMap(*map);
     Position *start = CreatePosition(1, 1);
-    Position *goal = CreatePosition(8, 18);
+    Position *goal = CreatePosition(height-2, length-2);
+    printf("\n");
     path = search(*start, *goal, *map, path);
     map = addPath(path, map);
     printMap(*map);
