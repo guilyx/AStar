@@ -3,5 +3,5 @@ project(c_astar)
 
 set(SOURCE_FILES astar.c)
 
-add_executable(cpp_astar ${SOURCE_FILES})
-target_link_libraries(cpp_astar m)
+add_executable(c_astar ${SOURCE_FILES})
+target_link_libraries(c_astar m)

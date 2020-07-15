@@ -179,12 +179,8 @@ void World::printGrid() {
 }
 
 void World::addPath(std::vector<Position> path) {
-    for (int i3 = 0; i3 < m_height; i3++) {
-        for (int j3 = 0; j3 < m_length; j3++) {
-            for (auto &i : path) {
-                m_grid[i.posX][i.posY] = 2;
-            }
-        }
+    for (auto &i : path) {
+        m_grid[i.posX][i.posY] = 2;
     }
     this->m_hasPath = true;
 }
