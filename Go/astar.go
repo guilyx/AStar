@@ -9,8 +9,8 @@ import (
 	color "github.com/fatih/color"
 )
 
-const DIAGONALS = true
-const HEURISTIC = 0
+const DIAGONALS = false
+const HEURISTIC = 1
 
 var Costs[]float64
 var Actions[][]int
@@ -199,6 +199,7 @@ func retrievePath(lastNode *Node) *Path{
 
 func getNeighbours(n *Node, goal *Position, env *Environment) []Node {
 	children := []Node{}
+	//fmt.Println("Node : ", *n)
 	for i, action := range Actions {
 		if !( (0 <= n.pos.y + action[0] && n.pos.y + action[0] < env.length) && 
 		      (0 <= n.pos.x + action[1] && n.pos.x + action[1] < env.height) ) {
@@ -222,6 +223,7 @@ func getNeighbours(n *Node, goal *Position, env *Environment) []Node {
 			parent: n,
 		}
 		child.fCost = child.gCost + child.hCost
+		//fmt.Println("Child : ", child)
 		children = append(children, child)
 	}
 	return children
@@ -229,9 +231,11 @@ func getNeighbours(n *Node, goal *Position, env *Environment) []Node {
 
 func findLowestFCost(nodes map[Position]*Node) *Node {
 	var currentNode *Node
+
 	for _, rdm := range nodes {
 		if rdm.isOpen == true {
 			currentNode = rdm
+			break
 		}
 	}
 
@@ -246,7 +250,7 @@ func findLowestFCost(nodes map[Position]*Node) *Node {
 	}
 
 	fmt.Printf("Current node is nil !!\n")
-
+	os.Exit(-1)
 	return nil
 }
 
@@ -261,38 +265,53 @@ func Search(start *Position, goal *Position, m *Environment) *Path {
 		y: start.y,
 	}
 
-	for currentPosition != *goal {
+	currentNode := nodes[*start]
+
+	for currentNode != nil {
 		// Extract lowest F in Open Nodes
-		currentNode := findLowestFCost(nodes)
+		currentNode = findLowestFCost(nodes)
 		currentPosition = currentNode.pos
 		
 		nodes[currentPosition].isOpen = false
 		nodes[currentPosition].isClosed = true
 
+		if currentPosition == *goal {
+			p := retrievePath(nodes[currentPosition])
+			fmt.Printf("Found path.\n")
+			return p
+		}
+
 		children := getNeighbours(nodes[currentPosition], goal, m)
 
 		for _, child := range children {
 			if previousNode, ok := nodes[child.pos]; ok {
-				if previousNode.isClosed == true {
+				if previousNode.isClosed {
 					continue
 				}
-
-				if child.gCost < previousNode.gCost {
-					child.isOpen = true
-					nodes[child.pos] = &child
+				if previousNode.isOpen {
+					if previousNode.gCost > child.gCost {
+						nodes[child.pos] = &child 
+						nodes[child.pos].isOpen = true
+						nodes[child.pos].isClosed = false
+					} else {
+						nodes[child.pos].isOpen = true
+						nodes[child.pos].isClosed = false
+					}
 				} else {
+					nodes[child.pos] = &child 
 					nodes[child.pos].isOpen = true
+					nodes[child.pos].isClosed = false
 				}
 			} else {
-				child.isOpen = true
 				nodes[child.pos] = &child
+				nodes[child.pos].isOpen = true
+				nodes[child.pos].isClosed = false
 			}
 		}
 	}
 
-	p := retrievePath(nodes[currentPosition])
-	fmt.Printf("Found path.\n")
-	return p
+	fmt.Printf("Path not found.\n")
+	return nil
 }
 
 func main() {
@@ -314,9 +333,10 @@ func main() {
 	PrintEnvironment(env)
 
 	path := Search(start, goal, env)
-	
-	fmt.Println(path)
 
-	AddPath(path, env)
+	if path != nil {
+		AddPath(path, env)
+	}
+
 	PrintEnvironment(env)
 }
