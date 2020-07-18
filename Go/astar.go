@@ -277,23 +277,17 @@ func Search(start *Position, goal *Position, m *Environment) *Path {
 					continue
 				}
 
-				if previousNode.isOpen == false {
+				if child.gCost < previousNode.gCost {
 					child.isOpen = true
 					nodes[child.pos] = &child
 				} else {
-					if child.gCost < previousNode.gCost {
-						child.isOpen = true
-						nodes[child.pos] = &child
-					} else {
-						previousNode.isOpen = true
-					}
+					nodes[child.pos].isOpen = true
 				}
 			} else {
 				child.isOpen = true
 				nodes[child.pos] = &child
 			}
 		}
-		time.Sleep(500 * time.Millisecond)
 	}
 
 	p := retrievePath(nodes[currentPosition])
