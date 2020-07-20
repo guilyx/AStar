@@ -267,6 +267,7 @@ func Search(start *Position, goal *Position, m *Environment) *Path {
 
 	currentNode := nodes[*start]
 
+	// While there is an open node
 	for currentNode != nil {
 		// Extract lowest F in Open Nodes
 		currentNode = findLowestFCost(nodes)
