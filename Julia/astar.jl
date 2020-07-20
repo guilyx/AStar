@@ -3,13 +3,8 @@ module astar
 DIAGONALS = false
 HEURISTIC = 1
 
-mutable struct Position
-    x::Int64
-    y::Int64
-end
-
 mutable struct Node
-    pos::Position
+    pos::Int64
     fCost::Float64
     gCost::Float64
     hCost::Float64
@@ -17,7 +12,7 @@ mutable struct Node
 end
 
 mutable struct Path
-    pos::Array{Position}
+    pos::Array{Int64}
     costs::Array{Float64}
 end
 
@@ -43,10 +38,36 @@ function get_actions()
     return actions
 end
 
+function print_color(color, string)
+    if color == "red"
+        print("\033[1;31m")
+        print(string)
+        print("\033[0m")
+    elseif color == "blue"
+        print("\033[1;34m")
+        print(string)
+        print("\033[0m")
+    elseif color == "yellow"
+        print("\033[1;33m")
+        print(string)
+        print("\033[0m")
+    else
+        print(string)
+    end
+end
+
 function generate_environment(length, height, wallPercentage)
     gd = zeros(Int8, height, length)
     
     for (index, _) in enumerate(gd)
+        if index % length == 0 || index <= length || index > length*height - length || (index - 1) % length == 0
+            gd[index] = 1
+            continue
+        end
+        if index//height % length == 0
+            gd[index] = 1
+            continue
+        end
         if rand() < wallPercentage
             gd[index] = 1
         end
@@ -60,11 +81,32 @@ end
 function print_grid(env) 
     for (index, val) in enumerate(env.grid)
         if index % env.length != 0
-            print(val, " ")
+            if val == 1
+                print_color("red", "█")
+            elseif val == 0
+                print(" ")
+            else
+                print_color("blue", "¤")
+            end
         else
+            if val == 1
+                print_color("red", "█")
+            elseif val == 0
+                print(" ")
+            else
+                print_color("blue", "¤")
+            end
             print("\n")
         end
     end
+end
+
+function add_path(env, path)
+    for (index, val) in enumerate(path.pos)
+        env.grid[val] = 3
+    end
+
+    return env
 end
 
 function main()
