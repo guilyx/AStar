@@ -25,7 +25,7 @@ mutable struct Environment
     length::Int64
     height::Int64
     wallPercentage::Float64
-    grid::Array{Array{Int64}}
+    grid::Array{Int8}
 end
 
 function get_actions()
@@ -43,11 +43,37 @@ function get_actions()
     return actions
 end
 
+function generate_environment(length, height, wallPercentage)
+    gd = zeros(Int8, height, length)
+    
+    for (index, _) in enumerate(gd)
+        if rand() < wallPercentage
+            gd[index] = 1
+        end
+
+    end
+
+    env = Environment(length, height, wallPercentage, gd)
+
+end
+
+function print_grid(env) 
+    for (index, val) in enumerate(env.grid)
+        if index % env.length != 0
+            print(val, " ")
+        else
+            print("\n")
+        end
+    end
+end
 
 function main()
     println(PROGRAM_FILE, " starting...")
-    m = get_actions()
-    println(m)
+    length = 20
+    height = 10
+    wallP = .1
+    env = generate_environment(length, height, wallP)
+    print_grid(env)
 end
 
 main()
