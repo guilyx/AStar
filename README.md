@@ -2,9 +2,9 @@
 
 A* algorithm in every languages.
 
-- [ ] C++
-- [ ] C
-- [ ] Python
+- [x] C++
+- [x] C
+- [x] Python
 - [ ] Go
 - [ ] Java
 - [ ] Julia
