@@ -5,7 +5,7 @@ A* algorithm in every languages.
 - [x] C++
 - [x] C
 - [x] Python
-- [ ] Go
+- [x] Go
 - [ ] Java
 - [ ] Julia
 - [ ] JavaScript
