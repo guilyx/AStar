@@ -8,6 +8,8 @@ mutable struct Node
     fCost::Float64
     gCost::Float64
     hCost::Float64
+    isClosed::Bool
+    isOpen::Bool
     parent::Node
 end
 
@@ -107,6 +109,18 @@ function add_path(env, path)
     end
 
     return env
+end
+
+function calculate_heuristic(start, goal)
+end
+
+function find_lowest_cost_node(nodes) 
+end
+
+function get_neighbours(current_node, goal_pos) 
+end
+
+function search(start, goal, env)
 end
 
 function main()
