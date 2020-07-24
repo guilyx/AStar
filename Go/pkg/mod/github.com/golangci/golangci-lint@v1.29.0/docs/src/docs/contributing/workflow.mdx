@@ -1,0 +1,79 @@
+---
+title: Contributing Workflow
+---
+
+# Contributing
+
+By participating to this project, you agree to abide our [code of
+conduct](https://github.com/golangci/golangci-lint/blob/master/CODE_OF_CONDUCT.md).
+
+## Setup your machine
+
+`golangci-lint` is written in [Go](https://golang.org/).
+
+Prerequisites:
+
+- `make`
+- [Go 1.13+](https://golang.org/doc/install)
+
+Fork and clone [golangci-lint](https://github.com/golangci/golangci-lint) repository.
+
+A good way of making sure everything is all right is running the following:
+
+```sh
+make build
+./golangci-lint run -v
+```
+
+## Test your change
+
+When you are satisfied with the changes, we suggest you run:
+
+```sh
+$ make test
+```
+
+Which runs all the linters and tests.
+
+## Create or update parameters for docs
+
+Add your new or updated parameters to `.golangci.example.yml` so they will be shown in the docs
+
+## Submit a pull request
+
+Push your branch to your `golangci-lint` fork and open a pull request against the
+`master` branch.
+
+## Pull request checks
+
+First, please, accept [CLA](https://gist.github.com/jirfag/26a39fd375da84b2d5ad4296fecb0668) - [cla assistant](https://cla-assistant.io/) will
+make a comment on the pull request about it.
+
+Also, we run a few checks in CI by using GitHub actions, you can see them [here](https://github.com/golangci/golangci-lint/blob/master/.github/workflows/pr.yml).
+
+## New releases
+
+First, see [our versioning policy](/usage/install/#versioning-policy).
+
+To make a new release create a tag `vx.y.z`. Don't forget to add zero patch version for a new minor release, e.g. `v1.99.0`.
+A GitHub action [workflow](https://github.com/golangci/golangci-lint/blob/master/.github/workflows/tag.yml) will start building and publishing release after that.
+
+After making a release you need to update:
+
+1. GitHub [action config](https://github.com/golangci/golangci-lint/blob/master/assets/github-action-config.json) by running:
+
+```sh
+make assets/github-action-config.json
+```
+
+2. The latest netlify state (e.g. docs/template_date.state):
+
+```sh
+make update_netlify_state
+```
+
+3. Contributors list
+
+```sh
+make update_contributors_list # may take 15 min
+```
