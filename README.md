@@ -7,7 +7,7 @@ A* algorithm in every languages.
 - [x] Python
 - [x] Go
 - [ ] Java
-- [ ] Julia
+- [x] Julia
 - [ ] JavaScript
 - [ ] Matlab
 - [ ] Bash
