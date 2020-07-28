@@ -9,6 +9,8 @@
 
 A* algorithm in every languages.
 
+This is an ongoing project, which is quite big for me, myself and I. Feel free to contribute by implementing A* from that list or from another language that isn't listed. Implementation-wise, you have artistic freedom.
+
 - [x] C++
 - [x] C
 - [x] Python
