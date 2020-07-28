@@ -4,3 +4,4 @@ C++/build/*
 Go/bin/*
 Go/pkg/*
 Go/.vscode/*
+*.class
