@@ -1,12 +1,16 @@
 import time
 from math import sqrt
 from typing import List, Tuple
+from sys import stdout
 import numpy as np
 import random
+from termcolor import colored
 
 # 1 for manhattan, 0 for euclidean
 HEURISTIC = 0
 DIAGONALS = True
+TIME = True
+PLOT = True
 
 class World:
     def __init__(self, length: int, height: int, p_walls: float):
@@ -39,36 +43,66 @@ class World:
     def add_path(self, path: List[Tuple[int]]):
         i = 0
         for elem in path:
-            if i == 0:
-                self.grid[elem[1]][elem[0]] = 3
-            elif i == len(path) - 1:
-                self.grid[elem[1]][elem[0]] = 4
+            if i == 0 or i == len(path) - 1:
+                self.grid[elem[0]][elem[1]] = 3
             else:
-                self.grid[elem[1]][elem[0]] = 2
+                self.grid[elem[0]][elem[1]] = 2
             i += 1
         self.path_added = True
 
-    def plot_path(self):
-        if self.path_added:
-            string_grid = self.grid.astype(str)
-            string_grid[string_grid == '0'] = ' '
-            string_grid[string_grid == '1'] = '█'
-            string_grid[string_grid == '2'] = 'o'
-            string_grid[string_grid == '3'] = 'x'
-            string_grid[string_grid == '4'] = 'x'
-            print(string_grid)
-        else:
-            print("No path added, can't plot path")
+    def plot_grid(self):
+        for rows in self.grid:
+            for elem in rows:
+                if elem == 1:
+                    stdout.write(colored('█', 'red'))
+                elif elem == 0:
+                    stdout.write(' ')
+                elif elem == 2:
+                    stdout.write(colored('¤', 'blue'))
+                elif elem == 3:
+                    stdout.write(colored('x', 'green'))
+                else:
+                    stdout.write('o', 'yellow')
+            print()
 
     def get_random_available_position(self) -> Tuple[int]:
+        i = 0
         while 1:
+            i += 1
             random_row = random.randint(0, self.height - 1)
             random_col = random.randint(0, self.length - 1)
 
             if self.grid[random_row][random_col] != 1:
                 break
+            if i > self.length*self.height*100:
+                print(colored("Couldn't find random available position.", "red"))
+                return None
                 
         return((random_row, random_col))
+
+    def get_start_goal(self, pHeuristic) -> Tuple[Tuple[int]]:
+        i = 0
+
+        # Initialization
+        start = self.get_random_available_position()
+        goal = self.get_random_available_position()
+        n = Node(start[1], start[0], goal[1], goal[0], 0, False, False, None)
+        h = n.calculate_heuristic()
+
+        # Set goal value
+        nTarget = Node(0, 0, self.length-1, self.height-1, 0, False, False, None)
+        hTarget = nTarget.calculate_heuristic()
+
+        while h < hTarget*pHeuristic:
+            i += 1
+            start = self.get_random_available_position()
+            goal = self.get_random_available_position()
+            n = Node(start[1], start[0], goal[1], goal[0], 0, False, False, None)
+            h = n.calculate_heuristic()
+            if i > 100*self.length*self.height:
+                print(colored("Couldn't find start and goal respecting the constraints.", "red"))
+                return None
+        return start, goal
                 
     def change_grid(self, position: Tuple[int], value: int):
         self.grid[position[1]][position[0]] = value
@@ -77,6 +111,10 @@ class World:
         for x in range(self.height):
             for y in range(self.length):
                 if random.random() < self.p_walls:
+                    self.grid[x][y] = 1
+                if x == 0 or x == self.height - 1:
+                    self.grid[x][y] = 1
+                if y == 0 or y == self.length - 1:
                     self.grid[x][y] = 1
 
 class Node:
@@ -95,12 +133,14 @@ class Node:
     True
     """
 
-    def __init__(self, pos_x: int, pos_y: int, goal_x: int, goal_y: int, g_cost: float, parent):
+    def __init__(self, pos_x: int, pos_y: int, goal_x: int, goal_y: int, g_cost: float, is_closed:bool, is_open:bool, parent):
         self.pos_x = pos_x
         self.pos_y = pos_y
         self.pos = (pos_y, pos_x)
         self.goal_x = goal_x
         self.goal_y = goal_y
+        self.is_closed = is_closed
+        self.is_open = is_open
         self.g_cost = g_cost
         self.parent = parent
         self.h_cost = self.calculate_heuristic()
@@ -116,6 +156,9 @@ class Node:
             return abs(dx) + abs(dy)
         else:
             return sqrt(dy ** 2 + dx ** 2)
+
+    def print(self):
+        print("Node : <Pos : ", self.pos, " >")
 
     def __lt__(self, other) -> bool:
         return self.f_cost <= other.f_cost
@@ -139,45 +182,51 @@ class AStar:
     """
 
     def __init__(self, start: Tuple[int], goal: Tuple[int], world: World):
-        self.start = Node(start[1], start[0], goal[1], goal[0], 0, None)
-        self.target = Node(goal[1], goal[0], goal[1], goal[0], 99999, None)
+        self.start = Node(start[1], start[0], goal[1], goal[0], 0, False, True, None)
+        self.target = Node(goal[1], goal[0], goal[1], goal[0], 99999, False, False, None)
         self.world = world
 
-        self.open_nodes = [self.start]
-        self.closed_nodes = []
+        self.nodes = dict()
+        self.nodes[start] = self.start
 
         self.reached = False
 
     def search(self) -> List[Tuple[int]]:
-        while self.open_nodes:
+        while self.count_open_nodes() > 0:
             # Open Nodes are sorted using __lt__
-            self.open_nodes.sort()
-            current_node = self.open_nodes.pop(0)
+            current_key = min([n for n in self.nodes if self.nodes[n].is_open], key=(lambda k: self.nodes[k].f_cost))
+            current_node = self.nodes[current_key]
 
             if current_node.pos == self.target.pos:
-                self.reached = True
+                print(colored("Found path.", "green"))
                 return self.retrace_path(current_node)
 
-            self.closed_nodes.append(current_node)
+            current_node.is_closed = True
+            current_node.is_open = False
+
             successors = self.get_successors(current_node)
 
             for child_node in successors:
-                if child_node in self.closed_nodes:
-                    continue
-
-                if child_node not in self.open_nodes:
-                    self.open_nodes.append(child_node)
-                else:
-                    # retrieve the best current path
-                    better_node = self.open_nodes.pop(self.open_nodes.index(child_node))
-
-                    if child_node.g_cost < better_node.g_cost:
-                        self.open_nodes.append(child_node)
+                if child_node.pos in self.nodes:
+                    if self.nodes[child_node.pos].is_closed:
+                        continue
+                    if not self.nodes[child_node.pos].is_open:
+                        self.nodes[child_node.pos] = child_node
                     else:
-                        self.open_nodes.append(better_node)
+                        if child_node.g_cost < self.nodes[child_node.pos].g_cost:
+                            self.nodes[child_node.pos] = child_node
+                else:
+                    self.nodes[child_node.pos] = child_node
+        print(colored("Path not found", "red"))
+        return [self.start.pos]
 
-        if not (self.reached):
-            return [self.start.pos]
+    def count_open_nodes(self) -> int:
+        i = 0
+        for _, val in self.nodes.items():
+            if val.is_open:
+                i += 1
+                break
+        return i
 
     def get_successors(self, parent: Node) -> List[Node]:
         """
@@ -200,6 +249,8 @@ class AStar:
                     self.target.pos_x,
                     self.target.pos_y,
                     parent.g_cost + action[2],
+                    False,
+                    True,
                     parent,
                 )
             )
@@ -223,12 +274,11 @@ if __name__ == "__main__":
 
     # doctest.testmod()
 
-    w = World(10, 10, .3)
-    print(w.grid)
+    w = World(70, 20, 0.2)
+    w.plot_grid()
     
     # Generated
-    start = w.get_random_available_position()
-    goal = w.get_random_available_position()
+    start, goal = w.get_start_goal(0.8)
 
     # Hardcoded
     # start = (5, 5)
@@ -237,8 +287,12 @@ if __name__ == "__main__":
     print(start, goal)
 
     astar = AStar(start, goal, w)
+    if TIME:
+        st = time.process_time()
     path = astar.search()
+    if TIME:
+        print("Search() Execution Time : ", time.process_time() - st, "seconds")
 
     w.add_path(path)
-    w.plot_path()
+    w.plot_grid()
 

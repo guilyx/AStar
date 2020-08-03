@@ -11,7 +11,7 @@
 #define clear()     printf("\033[H\033[J")
 
 
-#define DIAGONALS            true
+#define DIAGONALS            false
 #define HEURISTIC_FUNCTION   1
 
 typedef struct {
@@ -85,20 +85,18 @@ World::World(int height, int length, float wallPercentage) {
     m_height = height;
     m_length = length;
     m_wallPercentage = wallPercentage;
-    if (DIAGONALS) {
-        m_actions.push_back(Actions{1, 0, 1});
-        m_actions.push_back(Actions{0, 1, 1});
-        m_actions.push_back(Actions{-1, 0, 1});
-        m_actions.push_back(Actions{0, -1, 1});
-        m_actions.push_back(Actions{1, 1, sqrt(2)});
-        m_actions.push_back(Actions{-1, 1, sqrt(2)});
-        m_actions.push_back(Actions{-1, -1, sqrt(2)});
-        m_actions.push_back(Actions{1, -1, sqrt(2)});
-    } else {
-        m_actions.push_back(Actions{1, 0, 1});
-        m_actions.push_back(Actions{0, 1, 1});
-        m_actions.push_back(Actions{-1, 0, 1});
-        m_actions.push_back(Actions{0, -1, 1});
+    for (int i = -1 ; i <= 1 ; i++ ) {
+        for ( int j = -1 ; j <= 1 ; j++ ) {
+            if (i == 0 || j == 0) {
+                // It's not a diagonal move
+                m_actions.push_back(Actions{i, j, 1});
+            } else {
+                // It's a diagonal move, add only if diagonals is true
+                if (DIAGONALS) {
+                    m_actions.push_back(Actions{i, j, sqrt(2)});
+                }
+            }
+        }
     }
     generateGrid();
 }
@@ -400,7 +398,7 @@ std::vector<Position> AStar::search() {
 
 int main(int argc, char const *argv[])
 {
-    World w(20, 30, 0.1);
+    World w(20, 50, 0.1);
     w.printGrid();
     Position start = w.getRandomFreePosition();
     Position goal = w.getRandomFreePosition();
