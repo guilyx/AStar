@@ -25,6 +25,10 @@ This is an ongoing project, which is quite big for me, myself and I. Feel free t
 - [ ] Objective-C
 - [ ] Assembly
 
+## Timing Comparisons
+
+UC
+
 ## Contribute
 
 Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
